@@ -30,13 +30,24 @@ const cards = [
 
 const deck = [1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8];
 
+class CardName extends Component {
+    render() {
+        var cardObj = cards.filter(card=>(card.number==this.props.num))[0];
+        return (
+            <span>{cardObj.name} <button className="card-info" onClick={()=>this.props.show(this.props.num)}>?</button></span>
+        );
+    }
+}
+
 class PlayerDisplay extends Component {
     constructor(props) {
         super(props);
         this.handleCardChange = this.handleCardChange.bind(this);
         this.playSelected = this.playSelected.bind(this);
+        this.getText = this.getText.bind(this);
+        this.updateNumber = this.updateNumber.bind(this);
 
-        this.state = {toPlay: 0};
+        this.state = {toPlay: 0, textShown: false};
     }
 
     handleCardChange(event) {
@@ -47,6 +58,24 @@ class PlayerDisplay extends Component {
         var cardSelected = this.state.toPlay;
         this.setState({toPlay: 0});
         this.props.play(cardSelected);
+        this.updateNumber(false);
+    }
+
+    getText(cardNum) {
+        for (let i=0; i<cards.length; i++) {
+            if (cards[i].number == cardNum) {
+                var cardObj = cards[i];
+                break;
+            }
+        }
+        if (!cardObj) {
+            throw Error(`no card found with number ${cardNum}`);
+        }
+        return `${cardNum}: ${cardObj.name} - ${cardObj.text}`;
+    }
+
+    updateNumber(num) {
+        this.setState({textShown: num});
     }
 
     render() {
@@ -65,10 +94,17 @@ class PlayerDisplay extends Component {
                     this.props.hand.map((card, index) => <option key={index} value={card}>{this.props.getCardName(card)}</option>)
                 ); 
             }
+            var cardDetails;
+            if (this.state.textShown) {
+                cardDetails = this.getText(this.state.textShown);
+            }
             return (
             <div>
                 <p>Player {+this.props.playerNum+1}:
-                hand - {this.props.hand.map(this.props.getCardName).join(", ")}</p>
+                hand - {this.props.hand.map((num, index) => (
+                    <CardName key={index} num={num} show={this.updateNumber} />
+                ))}</p>
+                <p>{cardDetails}</p>
                 {this.props.allowToPlay ? <label htmlFor="cardChoice">Choose card to play:</label> : null}
                 {this.props.allowToPlay ? (
                     <select id="cardChoice" onChange={this.handleCardChange} value={this.state.toPlay}>
@@ -248,7 +284,7 @@ class CardPlayed extends Component {
     }
 }
 
-class App extends Component {
+class Game extends Component {
     constructor(props) {
         super(props);
         this.shuffle = this.shuffle.bind(this);
@@ -475,15 +511,8 @@ class App extends Component {
         newDiscards[`p${playerNum}`].push(card);
         var eliminated = this.state.eliminated;
         eliminated.push(playerNum);
-        if (eliminated.length == this.props.playerCount-1) {
-            // find which player has won!
-            for (let i=0; i<this.props.playerCount; i++) {
-                if (eliminated.indexOf(i) == -1) {
-                    this.setState(()=>({resultText: `Player ${i+1} wins - all other players were eliminated!`, gameOver: true}));
-                }
-            }
-        }
-        this.setState(()=>({played: newDiscards, hands: hands, eliminated: eliminated}));
+        var allEliminated = (eliminated.length == this.props.playerCount-1);
+        this.setState(()=>({played: newDiscards, hands: hands, eliminated: eliminated, gameOver: allEliminated}));
     }
 
     render() {
@@ -523,10 +552,22 @@ class App extends Component {
                 }
             }
         }
-        return this.state.gameOver ?
-        <p>The winner is player {winner+1} who holds a {this.getCardName(this.state.hands[`p${winner}`][0])}!</p>
-        :
-        (
+        var gameEnd;
+        if(this.state.gameOver) {
+            if (this.state.eliminated.length == this.props.playerCount - 1) {
+                gameEnd = 
+                    (
+                        <div>
+                            <p className="game-end">Game Over! Player {winner+1} wins - all other players were eliminated!</p>
+                            <button onClick={this.props.restart}>New Game</button>
+                        </div>
+                    );
+            }
+            else {
+                gameEnd = <p className="game-end">Game Over! The winner is player {winner+1} who holds a {this.getCardName(this.state.hands[`p${winner}`][0])}!</p>;
+            }
+        }
+        return (
             <div>
                 {cardPlayedDisplay}
                 {cardPlayedResult}
@@ -546,8 +587,52 @@ class App extends Component {
                 <p>
                     Deck: {this.state.deck.length} card{this.state.deck.length==1 ? "" : "s"}
                 </p>
+                {gameEnd}
             </div>
-        )
+        );
+    }
+}
+
+class App extends Component {
+    constructor(props) {
+        super(props);
+        this.handleChange = this.handleChange.bind(this);
+        this.handleSubmit = this.handleSubmit.bind(this);
+        this.restart = this.restart.bind(this);
+
+        this.state = {running: false};
+    }
+
+    handleChange(e) {
+        if (e.target.value > 0) {
+            this.setState({playerCount: e.target.value});
+        }
+    }
+
+    handleSubmit() {
+        this.setState({running: true});
+    }
+
+    restart() {
+        this.setState({running: false, playerCount: 0});
+    }
+
+    render() {
+        if (this.state.running) {
+            return <Game playerCount={this.state.playerCount} restart={this.restart}/>
+        }
+        return (
+            <div>
+                <p>Please select how many players will be in the game:</p>
+                <select onChange = {this.handleChange}>
+                    <option value="0">Select</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+                <button onClick={this.handleSubmit}>Start game!</button>
+            </div>
+        );
     }
 }
 
