@@ -69,13 +69,14 @@ class PlayerDisplay extends Component {
             <div>
                 <p>Player {+this.props.playerNum+1}:
                 hand - {this.props.hand.map(this.props.getCardName).join(", ")}</p>
-                <button onClick={this.props.draw}>Draw</button>
-                <label htmlFor="cardChoice">Choose card to play:</label>
-                <select id="cardChoice" onChange={this.handleCardChange} value={this.state.toPlay}>
-                    <option value="0">Select</option>
-                    {options}
-                </select>
-                <button onClick={this.playSelected}>Play!</button>
+                {this.props.allowToPlay ? <label htmlFor="cardChoice">Choose card to play:</label> : null}
+                {this.props.allowToPlay ? (
+                    <select id="cardChoice" onChange={this.handleCardChange} value={this.state.toPlay}>
+                        <option value="0">Select</option>
+                        {options}
+                    </select>
+                ) : null}
+                {this.props.allowToPlay ? <button onClick={this.playSelected}>Play!</button> : null}
             </div>
         );
     }
@@ -261,7 +262,7 @@ class App extends Component {
 
         this.state = {deck: deck, hands: {}, played: {}, discard: [], turn: 0,
                       lastPlayed: false, turnComplete: true, actionComplete: false,
-                    eliminated: [], resultText: ""};
+                    eliminated: [], resultText: "", gameOver: false};
 
         this.shuffle(true);
 
@@ -276,6 +277,7 @@ class App extends Component {
         this.state.played = played;
     
         this.discardTop(true);
+        this.draw(0, true);
     }
 
     shuffle(isInit) {
@@ -296,8 +298,7 @@ class App extends Component {
 
     draw(playerNo, isInit) {
         if (!this.state.deck.length) {
-            alert("No card left to draw!");
-            return;
+            throw Error("Tried to draw card from empty deck!");
         }
         var hand = this.state.hands[`p${playerNo}`];
         hand.push(this.state.deck[0]);
@@ -315,7 +316,8 @@ class App extends Component {
             this.state.hands = newHands;
         }
         else {
-            this.setState({deck: this.state.deck.slice(1), hands: newHands}); 
+            let newDeck = this.state.deck.slice(1);
+            this.setState((prevState) => ({deck: newDeck, hands: newHands})); 
         }
     }
 
@@ -359,12 +361,8 @@ class App extends Component {
     }
 
     getPlayerChoices(player, cardNum) {
-        // handmaid protects!
-        // guard against dummy player value of -1 (can set to anything without consequence once we're here):
-        if (player == -1) {
-            player = 0;
-        }
-        if (this.state.played[`p${player}`][this.state.played[`p${player}`].length-1] == 4
+        // handmaid protects! And guard against dummy player value of -1
+        if (player > -1 && this.state.played[`p${player}`][this.state.played[`p${player}`].length-1] == 4
             && this.state.played[`p${this.state.turn}`][this.state.played[`p${this.state.turn}`].length-1] != 4) {
             this.setState({resultText: `No effect, player ${player+1} played a Handmaid last turn!`});
         }
@@ -423,8 +421,13 @@ class App extends Component {
                         this.eliminate(player);
                         newCardText += `\n This means that ${this.state.turn == player ? "you are " : `player ${player+1} is `} eliminated!`;
                     }
-                    this.setState({hands: newHands, played: played,
-                        resultText: `${playerText} ${this.getCardName(card)} and drew a ${newCardText}`});
+                    if (this.state.gameOver) {
+                        this.setState(()=>({hands: newHands, played: played}));
+                    }
+                    else {
+                        this.setState(()=>({hands: newHands, played: played,
+                            resultText: `${playerText} ${this.getCardName(card)} and drew a ${newCardText}`}));
+                    }
                     break;
                 case 6:
                     let myCard = this.state.hands[`p${this.state.turn}`][0];
@@ -445,14 +448,6 @@ class App extends Component {
             }
         }
         this.setState({chosenPlayer: player, chosenNum: cardNum, actionComplete: true, lastPlayed: false});
-        if (this.state.eliminated.length == this.props.playerCount-1) {
-            // find which player has won!
-            for (let i=0; i<this.props.playerCount; i++) {
-                if (this.state.eliminated.indexOf(i) == -1) {
-                    this.setState({resultText: `Player ${i+1} wins - all other players were eliminated!`});
-                }
-            }
-        }
     }
 
     moveToNextTurn() {
@@ -464,6 +459,12 @@ class App extends Component {
         }
         this.setState({turnComplete: true, actionComplete: false,
             turn: current, chosenPlayer: false, chosenNum: false, lastPlayed: false});
+        if (this.state.deck.length) {
+            this.draw(current);
+        }
+        else {
+            this.setState({gameOver: true});
+        }
     }
 
     eliminate(playerNum) {
@@ -474,7 +475,15 @@ class App extends Component {
         newDiscards[`p${playerNum}`].push(card);
         var eliminated = this.state.eliminated;
         eliminated.push(playerNum);
-        this.setState({played: newDiscards, hands: hands, eliminated: eliminated});
+        if (eliminated.length == this.props.playerCount-1) {
+            // find which player has won!
+            for (let i=0; i<this.props.playerCount; i++) {
+                if (eliminated.indexOf(i) == -1) {
+                    this.setState(()=>({resultText: `Player ${i+1} wins - all other players were eliminated!`, gameOver: true}));
+                }
+            }
+        }
+        this.setState(()=>({played: newDiscards, hands: hands, eliminated: eliminated}));
     }
 
     render() {
@@ -501,15 +510,32 @@ class App extends Component {
                 </div>
             );
         }
-        return (
+        var winner;
+        if (this.state.gameOver) {
+            let value = 0;
+            for (let i=0; i<this.props.playerCount; i++) {
+                if (this.state.eliminated.indexOf(i) == -1) {
+                    let card = this.state.hands[`p${i}`][0];
+                    if (card > value) {
+                        value = card;
+                        winner = i;
+                    }
+                }
+            }
+        }
+        return this.state.gameOver ?
+        <p>The winner is player {winner+1} who holds a {this.getCardName(this.state.hands[`p${winner}`][0])}!</p>
+        :
+        (
             <div>
                 {cardPlayedDisplay}
                 {cardPlayedResult}
                 <h3>Current player's turn:</h3>
                 {(!this.state.actionComplete || this.state.turnComplete) ? 
                 <PlayerDisplay playerNum={this.state.turn} hand={this.state.hands[`p${this.state.turn}`]}
-                played={this.state.played[`p${this.state.turn}`]} draw={()=>this.draw(this.state.turn)}
-                play={(cardNum)=>this.play(+this.state.turn, +cardNum)} getCardName={this.getCardName} />
+                played={this.state.played[`p${this.state.turn}`]} 
+                play={(cardNum)=>this.play(+this.state.turn, +cardNum)} getCardName={this.getCardName}
+                allowToPlay={!this.state.lastPlayed && !this.state.actionComplete} />
                 : null}
                 <h3>All played cards:</h3>
                 <ul>
