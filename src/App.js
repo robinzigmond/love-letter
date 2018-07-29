@@ -28,8 +28,6 @@ const cards = [
     text: "If you discard this card, you are out of the round."}
 ];
 
-const deck = [1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8];
-
 class CardName extends Component {
     render() {
         var cardObj = cards.filter(card=>(card.number==this.props.num))[0];
@@ -173,13 +171,10 @@ class CardPlayed extends Component {
         this.setState({player: event.target.value-1});
     }
 
-    handleSubmit(isTest) {
+    handleSubmit() {
         if ((this.state.player > -1 || !this.state.playerChoice)
         && (this.state.cardNum || !this.state.cardChoice)) {
             this.props.getPlayerChoices(this.state.player, this.state.cardNum);
-        }
-        else if (isTest) {
-            this.props.getPlayerChoices(0, 0); // values irrelevant, just need this to move on in testing when form isn't yet coded
         }
         this.setState({player: -1, cardNum: 0});
     }
@@ -267,13 +262,7 @@ class CardPlayed extends Component {
                 );
                 break;               
             default:
-                cardAction = (
-                    <div>
-                        <p>This option not coded yet!</p>
-                        <button onClick={()=>this.handleSubmit(true)}>Move on anyway!</button>
-                    </div>
-                );;
-            break;
+                throw Error("unknown card played!");
         }
         return (
             <div>
@@ -286,6 +275,7 @@ class CardPlayed extends Component {
 
 class Game extends Component {
     constructor(props) {
+        var startDeck = [1, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8];
         super(props);
         this.shuffle = this.shuffle.bind(this);
         this.draw = this.draw.bind(this);
@@ -296,12 +286,11 @@ class Game extends Component {
         this.moveToNextTurn = this.moveToNextTurn.bind(this);
         this.eliminate = this.eliminate.bind(this);
 
-        this.state = {deck: deck, hands: {}, played: {}, discard: [], turn: 0,
+        this.state = {deck: startDeck, hands: {}, played: {}, discard: [], turn: 0,
                       lastPlayed: false, turnComplete: true, actionComplete: false,
                     eliminated: [], resultText: "", gameOver: false};
 
         this.shuffle(true);
-
         var hands = {}, played = {};
         for (let i=0; i<this.props.playerCount; i++) {
             hands[`p${i}`] = [];
@@ -423,7 +412,7 @@ class Game extends Component {
                     let theirCard = this.state.hands[`p${player}`][0];
                     if (yourCard > theirCard) {
                         this.eliminate(player);
-                        this.setState({resultText: `Player ${player+1} has a ${this.getCardName(theirCard)} and is eliminated"`});
+                        this.setState({resultText: `Player ${player+1} has a ${this.getCardName(theirCard)} and is eliminated`});
                     }
                     else if (theirCard > yourCard) {
                         this.eliminate(this.state.turn);
@@ -440,7 +429,7 @@ class Game extends Component {
                 case 5:
                     let card = this.state.hands[`p${player}`][0];
                     let topCard = this.state.deck[0];
-                    if (card != 8) { // if Princess was discarded (eliminating that player), it makes no sense to draw
+                    if (this.state.deck.length && card != 8) { // if Princess was discarded (eliminating that player), it makes no sense to draw
                         this.draw(player);
                     }
                     let newHands = this.state.hands, played = this.state.played;
@@ -508,7 +497,10 @@ class Game extends Component {
         var card = this.state.hands[`p${playerNum}`][0];
         hands[`p${playerNum}`] = [];
         var newDiscards = this.state.played;
-        newDiscards[`p${playerNum}`].push(card);
+        if (card) { // guard against the case where Price has been played on a player with Princess -
+            // in that case the eliminated player hasn't drawn and therefore has an empty hand
+            newDiscards[`p${playerNum}`].push(card);
+        }
         var eliminated = this.state.eliminated;
         eliminated.push(playerNum);
         var allEliminated = (eliminated.length == this.props.playerCount-1);
@@ -534,8 +526,9 @@ class Game extends Component {
             cardPlayedResult = (
                 <div>
                     <p>{this.state.resultText}</p>
+                    {this.state.gameOver ? null : <div>
                     <p>Pass the device to the next player, who can click to start their turn:</p>
-                    <button onClick={this.moveToNextTurn}>Start Turn</button>
+                    <button onClick={this.moveToNextTurn}>Start Turn</button></div>}
                 </div>
             );
         }
