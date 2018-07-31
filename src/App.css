@@ -1,11 +1,118 @@
+html {
+    box-sizing: border-box;
+}
+
+*, *:before, *:after {
+    box-sizing: inherit;
+}
+
+body {
+    background-color: #133238;
+    color: #f8e322;
+}
+
+button {
+    background-color: #aa4321;
+    color: #dfa;
+    font-weight: bold;
+    border: 3px solid #10d86a;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+select {
+    background-color: #e4f30b;
+    color: #133238;
+    border: none;
+}
+
+#title, #author {
+    text-align: center;
+}
+
+#author a {
+    color: #aa4321;
+}
+
+#game-setup {
+    width: 300px;
+    max-width: calc(100vw - 50px);
+    margin: 50px auto 0 auto;
+    border-radius: 10px;
+    border: 5px solid #ee7885;
+    padding: 10px;
+    background-color: #eee;
+    color: #133238;
+}
+
+#game-setup select {
+    width: 95px;
+    margin-right: 20px;
+}
+
+#game-setup button {
+    width: 95px;
+}
+
+#game-container {
+    height: 100vh;
+}
+
+#game, #log {
+    display: inline-block;
+    vertical-align: text-top;
+    overflow-y: auto;
+    height: 100%;
+    padding: 5px 10px;
+}
+
+#game {
+    width: 75%;
+}
+
+#game select {
+    margin-left: 5px;
+    margin-right: 10px;
+}
+
+.card-info {
+    margin-right: 10px;
+}
+
+#card-details {
+    background-color: #eee;
+    border: 2px solid #ee7885;
+    color: #133238;
+    padding: 10px 40px 5px 5px;
+    border-radius: 8px;
+    display: table; /* hack to make width fit text but be no wider (inline-block also works but messes with subsequent elements) */
+    position: absolute;
+    top: 50vh;
+    left: 50vw;
+    transform: translate(-50%, -50%);
+    max-width: calc(100vw - 100px);
+    z-index: 10;
+}
+
+#card-details button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+}
+
 .game-end {
     font-size: 20px;
     font-weight: bold;
 }
 
-#game, #log {
-    display: inline-block;
-    width: 50%;
-    vertical-align: text-top;
-    overflow-y: auto;
+#log {
+    width: 25%;
+    position: relative;
+    bottom: 0;
+}
+
+@media screen and (max-width: 750px) {
+    #game, #log {
+        width: 100%;
+    }
 }

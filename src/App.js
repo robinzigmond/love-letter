@@ -102,10 +102,10 @@ class PlayerDisplay extends Component {
                 hand - {this.props.hand.map((num, index) => (
                     <CardName key={index} num={num} show={this.updateNumber} />
                 ))}</p>
-                <p>{cardDetails}</p>
-                {this.props.allowToPlay ? <label htmlFor="cardChoice">Choose card to play:</label> : null}
+                {this.state.textShown ? <p id="card-details">{cardDetails}<button onClick={()=>(this.setState({textShown: false}))}>X</button></p> : null}
+                {this.props.allowToPlay ? <label htmlFor="card-choice">Choose card to play:</label> : null}
                 {this.props.allowToPlay ? (
-                    <select id="cardChoice" onChange={this.handleCardChange} value={this.state.toPlay}>
+                    <select id="card-choice" onChange={this.handleCardChange} value={this.state.toPlay}>
                         <option value="0">Select</option>
                         {options}
                     </select>
@@ -193,14 +193,14 @@ class CardPlayed extends Component {
             case 1:
                 cardAction = (
                     <div>
-                        <label htmlFor="playerChoice">Choose player:</label>
-                        <select id="playerChoice" value={this.state.player+1} onChange={this.handlePlayerChange}>
+                        <label htmlFor="player-choice">Choose player:</label>
+                        <select id="player-choice" value={this.state.player+1} onChange={this.handlePlayerChange}>
                             <option value="0">Select</option>
                             {playerChoices.map(playerNum =>
                             <option key={playerNum+1} value={playerNum+1}>Player {playerNum+1}</option>)}
                         </select>
-                        <label htmlFor="cardChoice">Choose card:</label>
-                        <select id="cardChoice" value={this.state.cardNum} onChange={this.handleCardChange}>
+                        <label htmlFor="card-choice">Choose card:</label>
+                        <select id="card-choice" value={this.state.cardNum} onChange={this.handleCardChange}>
                             <option value="0">Select</option>
                             {cardChoices.map(cardNum =>
                             <option key={cardNum} value={cardNum}>{this.props.getCardName(cardNum)}</option>)}
@@ -213,8 +213,8 @@ class CardPlayed extends Component {
             case 3:
                 cardAction = (
                     <div>
-                        <label htmlFor="playerChoice">Choose player:</label>
-                        <select id="playerChoice" value={this.state.player+1} onChange={this.handlePlayerChange}>
+                        <label htmlFor="player-choice">Choose player:</label>
+                        <select id="player-choice" value={this.state.player+1} onChange={this.handlePlayerChange}>
                             <option value="0">Select</option>
                             {playerChoices.map(playerNum =>
                             <option key={playerNum+1} value={playerNum+1}>Player {playerNum+1}</option>)}
@@ -235,8 +235,8 @@ class CardPlayed extends Component {
             case 6:
                 cardAction = (
                     <div>
-                        <label htmlFor="playerChoice">Choose player:</label>
-                        <select id="playerChoice" value={this.state.player+1} onChange={this.handlePlayerChange}>
+                        <label htmlFor="player-choice">Choose player:</label>
+                        <select id="player-choice" value={this.state.player+1} onChange={this.handlePlayerChange}>
                             <option value="0">Select</option>
                             {playerChoices.map(playerNum =>
                             <option key={playerNum+1} value={playerNum+1}>Player {playerNum+1}</option>)}
@@ -658,14 +658,14 @@ class Game extends Component {
                 }
                 gameEnd = (
                     <div>
-                        <p className="game-end">Game Over! {winnerText}</p>;
+                        <p className="game-end">Game Over! {winnerText}</p>
                         <button onClick={this.props.restart}>New Game</button>
                     </div>
                 );
             }
         }
         return (
-            <div>
+            <div id="game-container">
                 <div id="game">
                     {cardPlayedDisplay}
                     {cardPlayedResult}
@@ -674,7 +674,7 @@ class Game extends Component {
                     <PlayerDisplay playerNum={this.state.turn} hand={this.state.hands[`p${this.state.turn}`]}
                     played={this.state.played[`p${this.state.turn}`]} 
                     play={(cardNum)=>this.play(+this.state.turn, +cardNum)} getCardName={this.getCardName}
-                    allowToPlay={!this.state.lastPlayed && !this.state.actionComplete} />
+                    allowToPlay={!this.state.lastPlayed && !this.state.actionComplete && !this.gameOver} />
                     : null}
                     <h3>All played cards:</h3>
                     <ul>
@@ -710,7 +710,9 @@ class App extends Component {
     }
 
     handleSubmit() {
-        this.setState({running: true});
+        if (this.state.playerCount) {
+            this.setState({running: true});
+        }
     }
 
     restart() {
@@ -723,14 +725,18 @@ class App extends Component {
         }
         return (
             <div>
-                <p>Please select how many players will be in the game:</p>
-                <select onChange = {this.handleChange}>
-                    <option value="0">Select</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                </select>
-                <button onClick={this.handleSubmit}>Start game!</button>
+                <h1 id="title">Love Letter</h1>
+                <p id="author">Made for fun and education by <a href="https://github.com/robinzigmond">Robin Zigmond</a></p>
+                <div id="game-setup">
+                    <p>Please select how many players will be in the game:</p>
+                    <select onChange = {this.handleChange}>
+                        <option value="0">Select</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                    </select>
+                    <button onClick={this.handleSubmit}>Start game!</button>
+                </div>
             </div>
         );
     }
