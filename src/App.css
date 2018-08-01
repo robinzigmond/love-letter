@@ -9,6 +9,7 @@ html {
 body {
     background-color: #133238;
     color: #f8e322;
+    line-height: 1.3;
 }
 
 button {
@@ -75,6 +76,10 @@ select {
     margin-right: 10px;
 }
 
+.ok-button {
+    margin-left: 10px;
+}
+
 .card-info {
     margin-right: 10px;
 }
@@ -87,10 +92,9 @@ select {
     border-radius: 8px;
     display: table; /* hack to make width fit text but be no wider (inline-block also works but messes with subsequent elements) */
     position: absolute;
-    top: 50vh;
-    left: 50vw;
-    transform: translate(-50%, -50%);
-    max-width: calc(100vw - 100px);
+    max-width: calc(100vw - 130px);
+    top: 110px;
+    left: 120px;
     z-index: 10;
 }
 
@@ -107,12 +111,41 @@ select {
 
 #log {
     width: 25%;
-    position: relative;
-    bottom: 0;
+    border-left: 5px solid #aa4321;
+}
+
+#log ul {
+    list-style-type: none;
+}
+
+#log li::before {
+    content: "--   ";
+}
+
+#log li {
+    margin: 5px 0;
 }
 
 @media screen and (max-width: 750px) {
     #game, #log {
         width: 100%;
+    }
+
+    #game {
+        max-height: 69%;
+        position: relative;
+    }
+
+    #log {
+        border-left: none;
+        border-top: 5px solid #aa4321;
+        height: 30%;
+    }
+
+    #card-details {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: calc(100vw - 100px);
     }
 }

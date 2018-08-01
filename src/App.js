@@ -4,28 +4,28 @@ import './App.css';
 const cards = [
     {number: 1,
     name: "Guard",
-    text: "Name a non-Guard card and choose a player. If that player has that card, he or she is out of the round."},
+    text: "Name a non-Guard card and choose a player. If that player has that card, he or she is out of the round"},
     {number: 2,
     name: "Priest",
-    text: "Look at another player's hand."},
+    text: "Look at another player's hand"},
     {number: 3,
     name: "Baron",
-    text: "You and another player secretly compare hands. The player with the lower value is out of the round."},
+    text: "You and another player secretly compare hands. The player with the lower value is out of the round"},
     {number: 4,
     name: "Handmaid",
-    text: "Until your next turn, ignore all effects from other players' cards."},
+    text: "Until your next turn, ignore all effects from other players' cards"},
     {number: 5,
     name: "Prince",
-    text: "Choose any player (including yourself) to discard his or her hand and draw a new card."},
+    text: "Choose any player (including yourself) to discard his or her hand and draw a new card"},
     {number: 6,
     name: "King",
-    text: "Trade hands with another player of your choice."},
+    text: "Trade hands with another player of your choice"},
     {number: 7,
     name: "Countess",
-    text: "If you have this card and the King or Prince in your hand, you must discard this card."},
+    text: "If you have this card and the King or Prince in your hand, you must discard this card"},
     {number: 8,
     name: "Princess",
-    text: "If you discard this card, you are out of the round."}
+    text: "If you discard this card, you are out of the round"}
 ];
 
 class CardName extends Component {
@@ -199,7 +199,7 @@ class CardPlayed extends Component {
                             {playerChoices.map(playerNum =>
                             <option key={playerNum+1} value={playerNum+1}>Player {playerNum+1}</option>)}
                         </select>
-                        <label htmlFor="card-choice">Choose card:</label>
+                        <label htmlFor="card-choice">Choose which card you think they have:</label>
                         <select id="card-choice" value={this.state.cardNum} onChange={this.handleCardChange}>
                             <option value="0">Select</option>
                             {cardChoices.map(cardNum =>
@@ -210,10 +210,22 @@ class CardPlayed extends Component {
                 );
                 break;
             case 2:
+                cardAction = (
+                    <div>
+                        <label htmlFor="player-choice">Choose which player's hand to look at:</label>
+                        <select id="player-choice" value={this.state.player+1} onChange={this.handlePlayerChange}>
+                            <option value="0">Select</option>
+                            {playerChoices.map(playerNum =>
+                            <option key={playerNum+1} value={playerNum+1}>Player {playerNum+1}</option>)}
+                        </select>
+                        <button onClick={this.handleSubmit}>Go</button>
+                    </div>
+                );
+                break;
             case 3:
                 cardAction = (
                     <div>
-                        <label htmlFor="player-choice">Choose player:</label>
+                        <label htmlFor="player-choice">Choose which player's hand to compare with yours:</label>
                         <select id="player-choice" value={this.state.player+1} onChange={this.handlePlayerChange}>
                             <option value="0">Select</option>
                             {playerChoices.map(playerNum =>
@@ -226,16 +238,28 @@ class CardPlayed extends Component {
             case 4:
                 cardAction = (
                     <div>
-                        <p>You are protected until your next turn!</p>
-                        <button onClick={this.handleSubmit}>OK</button>
+                        <p>You are protected until your next turn!
+                        <button className="ok-button" onClick={this.props.okClick}>OK</button></p>
                     </div>
                 );
                 break;
             case 5:
+                cardAction = (
+                    <div>
+                        <label htmlFor="player-choice">Choose player to discard their hand:</label>
+                        <select id="player-choice" value={this.state.player+1} onChange={this.handlePlayerChange}>
+                            <option value="0">Select</option>
+                            {playerChoices.map(playerNum =>
+                            <option key={playerNum+1} value={playerNum+1}>Player {playerNum+1}</option>)}
+                        </select>
+                        <button onClick={this.handleSubmit}>Go</button>
+                    </div>
+                );
+                break;
             case 6:
                 cardAction = (
                     <div>
-                        <label htmlFor="player-choice">Choose player:</label>
+                        <label htmlFor="player-choice">Choose player to swap hands with:</label>
                         <select id="player-choice" value={this.state.player+1} onChange={this.handlePlayerChange}>
                             <option value="0">Select</option>
                             {playerChoices.map(playerNum =>
@@ -248,8 +272,8 @@ class CardPlayed extends Component {
             case 7:
                 cardAction = (
                     <div>
-                        <p>No more decisions to make this turn! (But you haven't made one yet either :) )</p>
-                        <button onClick={this.handleSubmit}>OK</button>
+                        <p>No more decisions to make this turn!
+                        <button className="ok-button" onClick={this.props.okClick}>OK</button></p>
                     </div>
                 );
                 break;
@@ -277,6 +301,16 @@ class GameLog extends Component {
     constructor(props) {
         super(props);
         this.printLogLine = this.printLogLine.bind(this);
+
+        this.bottom = React.createRef();
+    }
+
+    componentDidMount() {
+        this.bottom.current.scrollIntoView();
+    }
+
+    componentDidUpdate() {
+        this.bottom.current.scrollIntoView();
     }
 
     printLogLine(player, messageObj) {
@@ -299,6 +333,7 @@ class GameLog extends Component {
                 <ul>
                     {this.props.log.map((messageObj, index) => <li key={index}>{this.printLogLine(this.props.player, messageObj)}</li>)}
                 </ul>
+                <div id="log-bottom" ref={this.bottom}></div>
             </div>
         );
     }
@@ -320,7 +355,7 @@ class Game extends Component {
 
         this.state = {deck: startDeck, hands: {}, played: {}, discard: [], turn: 0,
                       lastPlayed: false, turnComplete: true, actionComplete: false,
-                    eliminated: [], resultText: "", gameOver: false,
+                    eliminated: [], resultText: "", gameOver: false, waitingHandover: false,
                     log: [{normalMessage: "Game started"}]};
 
         this.shuffle(true);
@@ -328,7 +363,7 @@ class Game extends Component {
         for (let i=0; i<this.props.playerCount; i++) {
             hands[`p${i}`] = [];
             this.state.hands = hands
-            this.draw(i, true);
+            this.draw(i, true, false);
             played[`p${i}`] = [];
         }
 
@@ -355,6 +390,9 @@ class Game extends Component {
     }
 
     draw(playerNo, isInit, shouldAddToLog) {
+        if (shouldAddToLog === undefined) {
+            shouldAddToLog = true;
+        }
         if (!this.state.deck.length) {
             throw Error("Tried to draw card from empty deck!");
         }
@@ -381,8 +419,10 @@ class Game extends Component {
         else {
             let newDeck = this.state.deck.slice(1);
             this.setState((prevState) => ({deck: newDeck, hands: newHands}));
-            this.addToLog({special: playerNo, specialMessage: `You drew a ${this.getCardName(card)}`,
-            normalMessage: `Player ${playerNo+1} drew a card`});
+            if (shouldAddToLog) {
+                this.addToLog({special: playerNo, specialMessage: `You drew a ${this.getCardName(card)}`,
+                normalMessage: `Player ${playerNo+1} drew a card`});
+            }
         }
     }
 
@@ -492,7 +532,7 @@ class Game extends Component {
                     let card = this.state.hands[`p${player}`][0];
                     let topCard = this.state.deck[0];
                     if (this.state.deck.length && card != 8) { // if Princess was discarded (eliminating that player), it makes no sense to draw
-                        this.draw(player);
+                        this.draw(player, false, false);
                     }
                     let newHands = this.state.hands, played = this.state.played;
                     newHands[`p${player}`] = newHands[`p${player}`].slice(1);
@@ -564,7 +604,7 @@ class Game extends Component {
         while (this.state.eliminated.indexOf(current) > -1) {
             current = (current + 1) % this.props.playerCount;
         }
-        this.setState({turnComplete: true, actionComplete: false,
+        this.setState({turnComplete: true, actionComplete: false, waitingHandover: false,
             turn: current, chosenPlayer: false, chosenNum: false, lastPlayed: false});
         if (this.state.deck.length) {
             this.draw(current);
@@ -602,22 +642,28 @@ class Game extends Component {
         }
         if (this.state.lastPlayed) {
             cardPlayedDisplay = <CardPlayed numPlayers={this.props.playerCount} getCardName={this.getCardName} getPlayerChoices={this.getPlayerChoices}
-            playerNum={this.state.turn} cardPlayed={this.state.lastPlayed} eliminated={this.state.eliminated} />;
+            playerNum={this.state.turn} cardPlayed={this.state.lastPlayed} eliminated={this.state.eliminated} okClick={()=>(this.setState({waitingHandover: true, lastPlayed: false}))}/>;
         }
         else {
             cardPlayedDisplay = "";
         }
-        if (this.state.turnComplete) {
+        if (this.state.gameOver) {
+            cardPlayedResult = null;
+        }
+        else if (this.state.turnComplete) {
             cardPlayedResult = <p>Player {this.state.turn+1}'s turn!</p>
+        }
+        else if (this.state.waitingHandover){
+            cardPlayedResult = (
+                <div>
+                    <p>Pass the device to the next player, who can click to start their turn:</p>
+                    <button onClick={this.moveToNextTurn}>Start Turn</button>
+                </div>
+            );
         }
         else if (this.state.actionComplete){
             cardPlayedResult = (
-                <div>
-                    <p>{this.state.resultText}</p>
-                    {this.state.gameOver ? null : <div>
-                    <p>Pass the device to the next player, who can click to start their turn:</p>
-                    <button onClick={this.moveToNextTurn}>Start Turn</button></div>}
-                </div>
+                <p>{this.state.resultText}<button className="ok-button" onClick={()=>(this.setState({waitingHandover: true}))}>OK</button></p>
             );
         }
         var winner;
@@ -670,11 +716,11 @@ class Game extends Component {
                     {cardPlayedDisplay}
                     {cardPlayedResult}
                     <h3>Current player's turn:</h3>
-                    {(!this.state.actionComplete || this.state.turnComplete) ? 
+                    {(!this.state.waitingHandover) ? 
                     <PlayerDisplay playerNum={this.state.turn} hand={this.state.hands[`p${this.state.turn}`]}
                     played={this.state.played[`p${this.state.turn}`]} 
                     play={(cardNum)=>this.play(+this.state.turn, +cardNum)} getCardName={this.getCardName}
-                    allowToPlay={!this.state.lastPlayed && !this.state.actionComplete && !this.gameOver} />
+                    allowToPlay={!this.state.lastPlayed && !this.state.actionComplete && !this.state.gameOver} />
                     : null}
                     <h3>All played cards:</h3>
                     <ul>
@@ -687,7 +733,7 @@ class Game extends Component {
                     </p>
                     {gameEnd}
                 </div>
-                <GameLog log={this.state.log} player={this.state.turn}/>
+                {(!this.state.waitingHandover) ? <GameLog log={this.state.log} player={this.state.turn} /> : null}
             </div>
         );
     }
