@@ -330,6 +330,7 @@ class GameLog extends Component {
     render () {
         return (
             <div id="log">
+                <h4 id="log-title">Game Log</h4>
                 <ul>
                     {this.props.log.map((messageObj, index) => <li key={index}>{this.printLogLine(this.props.player, messageObj)}</li>)}
                 </ul>
@@ -479,9 +480,10 @@ class Game extends Component {
             switch (+this.state.lastPlayed) {
                 case 1:
                     // guard - compare named card with named player's card
-                    this.addToLog({special: this.state.turn,
+                    this.addToLog({special: [this.state.turn, player],
                         normalMessage: `Player ${this.state.turn+1} picked player ${player+1} and named ${this.getCardName(cardNum)}`,
-                        specialMessage: `You picked player ${player+1} and named ${this.getCardName(cardNum)}`});
+                        specialMessage: [`You picked player ${player+1} and named ${this.getCardName(cardNum)}`,
+                        `Player ${this.state.turn+1} picked you and named ${this.getCardName(cardNum)}`]});
                     if (cardNum == this.state.hands[`p${player}`][0]) {
                         this.eliminate(player);
                         this.setState({resultText: `You guessed correct! Player ${player+1} does have a ${this.getCardName(cardNum)}! They are eliminated!`});
@@ -489,17 +491,23 @@ class Game extends Component {
                     }
                     else {
                         this.setState({resultText: `Player ${player+1} does not have a ${this.getCardName(cardNum)}!`});
-                        this.addToLog({normalMessage: `Player ${player+1} did not have a ${this.getCardName(cardNum)}`});
+                        this.addToLog({special: player, normalMessage: `Player ${player+1} did not have a ${this.getCardName(cardNum)}`,
+                        specialMessage: `You did not have a ${this.getCardName(cardNum)}`});
                     }
                     break;
                 case 2:
                     let cardSeen = this.state.hands[`p${player}`][0];
                     this.setState({resultText: `Player ${player+1} has a ${this.getCardName(cardSeen)}`});
-                    this.addToLog({special: this.state.turn,
+                    this.addToLog({special: [this.state.turn, player],
                     normalMessage: `Player ${this.state.turn+1} looked at player ${player+1}'s hand`,
-                    specialMessage: `You saw a ${this.getCardName(cardSeen)} in player ${player+1}'s hand`})
+                    specialMessage:[`You saw a ${this.getCardName(cardSeen)} in player ${player+1}'s hand`,
+                    `Player ${this.state.turn+1} looked at your hand and saw your ${this.getCardName(cardSeen)}`]});
                     break;
                 case 3:
+                    this.addToLog({special: [this.state.turn, player],
+                    normalMessage: `Player ${this.state.turn+1} compared hands with player ${player+1}`,
+                    specialMessage: [`You compared hands with player ${player+1}`,
+                    `Player ${this.state.turn+1} compared hands with you`]});
                     let yourCard = this.state.hands[`p${this.state.turn}`][0];
                     let theirCard = this.state.hands[`p${player}`][0];
                     if (yourCard > theirCard) {
@@ -521,7 +529,7 @@ class Game extends Component {
                         this.addToLog({special: [player, this.state.turn],
                         normalMessage: `Player ${player+1} had the same card as player ${this.state.turn+1}!`,
                         specialMessage: [`Player ${this.state.turn+1} also had a ${this.getCardName(yourCard)}!`,
-                        `Player ${this.state.turn+1} also had a ${this.getCardName(theirCard)}!`]});
+                        `Player ${player+1} also had a ${this.getCardName(theirCard)}!`]});
                     }
                     break;
                 case 4:
@@ -543,28 +551,31 @@ class Game extends Component {
                         played[`p${player}`] = played[`p${player}`].slice(0, -1).concat([card]).concat(played[`p${player}`].slice(-1));
                     }
                     let playerText = (player==this.state.turn ? "You discarded your" : `Player ${player+1} discarded their`);
-                    let newCardText = (player==this.state.turn ? this.getCardName(topCard) : "new one")
+                    let newCardText;
                     if (card == 8) { // a discarded Princess eliminates that player!
                         this.eliminate(player);
-                        newCardText += `\n This means that ${this.state.turn == player ? "you are " : `player ${player+1} is `} eliminated!`;
+                        newCardText = `\n This means that ${this.state.turn == player ? "you are " : `player ${player+1} is `} eliminated!`;
+                    }
+                    else {
+                        newCardText = `and drew a ${player==this.state.turn ? this.getCardName(topCard) : "new card"}`;
                     }
                     if (this.state.gameOver) {
                         this.setState(()=>({hands: newHands, played: played}));
                     }
                     else {
                         this.setState(()=>({hands: newHands, played: played,
-                            resultText: `${playerText} ${this.getCardName(card)} and drew a ${newCardText}`}));
+                            resultText: `${playerText} ${this.getCardName(card)} ${newCardText}`}));
                     }
                     var logMessage;
                     if (this.state.turn == player) {
                         logMessage = {special: this.state.turn,
-                        normalMessage: `Player ${this.state.turn+1} discarded their card and drew a new one`,
+                        normalMessage: `Player ${this.state.turn+1} discarded their ${this.getCardName(card)} and drew a new card`,
                         specialMessage: `You discarded your ${this.getCardName(card)} and drew a ${this.getCardName(topCard)}`};
                     }
                     else {
                         logMessage = {special: [this.state.turn, player],
                         normalMessage: `Player ${this.state.turn+1} made player ${player+1} discard. They discarded their ${this.getCardName(card)} and ${card == 8 ? "were eliminated" : "drew a new card"}`,
-                        specialMessage: [`You made player ${player+1} discard their ${this.getCardName(card)} and ${card==8 ? "they were eliminated!" : "draw a new one"}`,
+                        specialMessage: [`You made player ${player+1} discard their ${this.getCardName(card)} and ${card==8 ? "they were eliminated!" : "draw a new card"}`,
                                         `You had to discard your ${this.getCardName(card)} and drew a ${this.getCardName(topCard)}`]};
                     }
                     this.addToLog(logMessage);
@@ -592,7 +603,9 @@ class Game extends Component {
             }
         }
         if (handMaid) {
-            this.addToLog({normalMessage: `No effect, player ${player+1} is protected by the Handmaid`});
+            this.addToLog({special: player,
+            normalMessage: `Player ${player+1} was chosen but they are protected by the Handmaid - no effect!`,
+            specialMessage: "You were chosen but were protected by your Handmaid - no effect!"});
         }
         this.setState({chosenPlayer: player, chosenNum: cardNum, actionComplete: true, lastPlayed: false});
     }
@@ -647,11 +660,8 @@ class Game extends Component {
         else {
             cardPlayedDisplay = "";
         }
-        if (this.state.gameOver) {
+        if (this.state.gameOver || this.state.turnComplete) {
             cardPlayedResult = null;
-        }
-        else if (this.state.turnComplete) {
-            cardPlayedResult = <p>Player {this.state.turn+1}'s turn!</p>
         }
         else if (this.state.waitingHandover){
             cardPlayedResult = (
@@ -713,9 +723,9 @@ class Game extends Component {
         return (
             <div id="game-container">
                 <div id="game">
+                    <h3>Player {this.state.turn+1}'s turn:</h3>
                     {cardPlayedDisplay}
                     {cardPlayedResult}
-                    <h3>Current player's turn:</h3>
                     {(!this.state.waitingHandover) ? 
                     <PlayerDisplay playerNum={this.state.turn} hand={this.state.hands[`p${this.state.turn}`]}
                     played={this.state.played[`p${this.state.turn}`]} 
@@ -725,8 +735,10 @@ class Game extends Component {
                     <h3>All played cards:</h3>
                     <ul>
                         {Object.keys(this.state.played).sort().map(playerKey =>
-                        <li key={playerKey}>Player {+playerKey.slice(1)+1} {this.state.eliminated.indexOf(+playerKey.slice(1)) > -1 ? " (ELIMINATED)" : ""}:
-                        {this.state.played[playerKey].map(this.getCardName).join(", ")}</li>)}
+                        <li key={playerKey}>
+                            <span className={this.state.eliminated.indexOf(+playerKey.slice(1)) > -1 ? "eliminated" : ""}>Player {+playerKey.slice(1)+1}</span>:&nbsp;
+                            {this.state.played[playerKey].map(this.getCardName).join(", ")}
+                        </li>)}
                     </ul>
                     <p>
                         Deck: {this.state.deck.length} card{this.state.deck.length==1 ? "" : "s"}
@@ -772,6 +784,7 @@ class App extends Component {
         return (
             <div>
                 <h1 id="title">Love Letter</h1>
+                <p id="description">Online implementation of the popular card game by Seiji Kanai, published by Asmodee</p>
                 <p id="author">Made for fun and education by <a href="https://github.com/robinzigmond">Robin Zigmond</a></p>
                 <div id="game-setup">
                     <p>Please select how many players will be in the game:</p>
